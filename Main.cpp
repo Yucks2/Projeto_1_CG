@@ -181,7 +181,8 @@ void updateIA()
         }
 
         float dxBall = ball.x - players[i].x;
-        float distToBall = sqrt(dxBall * dxBall + (ball.y - players[i].y) * (ball.y - players[i].y));
+        float dyBall = ball.y - players[i].y;
+        float distToBall = sqrt(dxBall * dxBall + dyBall * dyBall);
 
         float targetX, targetY;
 
