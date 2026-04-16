@@ -55,6 +55,10 @@ const float SCENE_TOP = 5.5f;
 const float BLEACHER_GAP = 0.55f;
 const float BLEACHER_THICK = 1.10f;
 
+
+// Ângulo de rotação da bola (em graus).
+float ballRotation = 0.0f;
+
 //estado do Jogo
 int scoreLeft = 0;
 int scoreRight = 0;
@@ -67,6 +71,8 @@ float targetGoalRightX = FIELD_LENGTH / 2.0f;
 
 float invasorIndicatorTimer = 0.0f;
 const float INDICATOR_DURATION = 3.0f;
+
+
 
 enum Funcao { ATACANTE, MEIO_CAMPO, ZAGUEIRO };
 
@@ -84,7 +90,7 @@ struct Torcedor {
     float r, g, b;
 };
 
-const int MAX_TORCEDORES = 3000;
+const int MAX_TORCEDORES = 1500;
 Torcedor torcida[MAX_TORCEDORES];
 
 Entity players[20];
@@ -103,9 +109,11 @@ Entity segurancas[2];
 //variável para armazenar qual torcedor saiu da arquibancada
 int indiceTorcedorInvasor = -1;
 
+void drawCrowdPerson(float x, float y, float r, float g, float b, int variant);
+
 void drawCrowd()
 {
-    glPointSize(8.0f); //tamanho do torcedor
+    /*glPointSize(8.0f); //tamanho do torcedor
     glBegin(GL_POINTS);
     for (int i = 0; i < MAX_TORCEDORES; i++)
     {
@@ -116,7 +124,25 @@ void drawCrowd()
         glColor3f(torcida[i].r, torcida[i].g, torcida[i].b);
         glVertex2f(torcida[i].x, torcida[i].y);
     }
-    glEnd();
+    glEnd();*/
+    for (int i = 0; i < MAX_TORCEDORES; i++)
+    {
+        if (i == indiceTorcedorInvasor)
+        {
+            continue;
+        }
+
+        int variant = i % 3;
+
+        drawCrowdPerson(
+            torcida[i].x,
+            torcida[i].y,
+            torcida[i].r,
+            torcida[i].g,
+            torcida[i].b,
+            variant
+        );
+    }
 }
 
 void setupOrtho()
@@ -210,15 +236,14 @@ void updateIA()
         float dy = targetY - players[i].y;
         float dist = sqrt(dx * dx + dy * dy);
 
-        //só movemos se estivermos longe o suficiente do alvo
         if(dist > 0.10f)
         {
-            //normalizamos o vetor  e multiplicamos pela velocidade individual, pela base e pelo deltaTime
+            //normaliza o vetor  e multiplica pela velocidade individual, pela base e pelo deltaTime
             players[i].x += (dx / dist) * players[i].speed * baseSpeed * deltaTime;
             players[i].y += (dy / dist) * players[i].speed * baseSpeed * deltaTime;
         }
 
-        //resolve colisão com a bola e outros jogadores
+        //colisão com a bola e outros jogadores
         resolveCollisionWithMass(players[i], ball, 0.12f, 0.08f);
         for (int j = 0; j < 20; j++)
         {
@@ -233,7 +258,7 @@ void updateIA()
 void updateGoalkeepers()
 {
     float gkSpeed = 1.0f * deltaTime; //velocidade de reação do goleiro
-    float goalLimitY = 0.55f;         //limite das traves
+    float goalLimitY = 0.55f; //limite das traves
 
     for(int i = 0; i < 2; i++)
     {
@@ -341,6 +366,17 @@ void updateBall(GLFWwindow* window)
     ball.x += ball.vx * deltaTime;
     ball.y += ball.vy * deltaTime;
 
+
+    //atualiza rotação da bola
+	float velocidade = sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+	ballRotation += velocidade * 120.0f * deltaTime;
+
+	if (ballRotation > 360.0f)
+	{
+	    ballRotation -= 360.0f;
+	}
+
+
     //lógica de colisão com as paredes
     float limitX = FIELD_LENGTH / 2.0f;
     float limitY = FIELD_WIDTH / 2.0f;
@@ -378,6 +414,20 @@ void updateBall(GLFWwindow* window)
         }
     }
 }
+
+void drawHighlightBox(float x, float y, float size)
+{
+    glColor3f(1.0f, 1.0f, 0.0f); // amarelo
+    glLineWidth(3.0f);
+
+    glBegin(GL_LINE_LOOP);
+        glVertex2f(x - size, y - size);
+        glVertex2f(x + size, y - size);
+        glVertex2f(x + size, y + size);
+        glVertex2f(x - size, y + size);
+    glEnd();
+}
+
 
 
 void drawFilledRect(float x1, float y1, float x2, float y2, float r, float g, float b)
@@ -430,6 +480,75 @@ void drawCircle(float cx, float cy, float radius, float r, float g, float b, boo
         glVertex2f(x, y);
     }
     glEnd();
+}
+
+void drawCircleAlpha(float cx, float cy, float radius, float r, float g, float b, float alpha)
+{
+    glColor4f(r, g, b, alpha);
+    const int segments = 120;
+
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(cx, cy);
+
+    for (int i = 0; i <= segments; i++)
+    {
+        float theta = 2.0f * PI * float(i) / float(segments);
+        float x = cx + radius * cos(theta);
+        float y = cy + radius * sin(theta);
+        glVertex2f(x, y);
+    }
+
+    glEnd();
+}
+
+void drawSecurityModel(const Entity& s)
+{
+    float x = s.x;
+    float y = s.y;
+
+    // sombra
+    drawCircleAlpha(x, y - 0.18f, 0.06f, 0.0f, 0.0f, 0.0f, 0.12f);
+
+    // cabeça
+    drawCircle(x, y + 0.09f, 0.04f, 1.0f, 0.85f, 0.70f, true);
+
+    // óculos escuros
+    drawFilledRect(x - 0.025f, y + 0.085f, x + 0.025f, y + 0.065f, 0.0f, 0.0f, 0.0f);
+    drawLine(x, y + 0.085f, x, y + 0.065f, 0.3f, 0.3f, 0.3f, 1.0f);
+
+    // pescoço
+    drawLine(x, y + 0.05f, x, y + 0.02f, 0.85f, 0.75f, 0.65f, 2.0f);
+
+    // paletó / tronco
+    drawFilledRect(x - 0.06f, y - 0.01f, x + 0.06f, y + 0.06f, 0.0f, 0.0f, 0.0f);
+
+    // camisa branca só no centro superior
+    drawFilledRect(x - 0.018f, y - 0.005f, x + 0.018f, y + 0.05f, 1.0f, 1.0f, 1.0f);
+
+    // gravata
+    drawLine(x, y + 0.04f, x, y - 0.005f, 0.0f, 0.0f, 0.0f, 2.0f);
+
+    // cintura / separação visual
+    drawLine(x - 0.06f, y - 0.01f, x + 0.06f, y - 0.01f, 0.2f, 0.2f, 0.2f, 1.5f);
+
+    // calça
+    drawFilledRect(x - 0.05f, y - 0.10f, x + 0.05f, y - 0.01f, 0.03f, 0.03f, 0.03f);
+
+    // separação entre as pernas
+    drawLine(x, y - 0.10f, x, y - 0.17f, 0.15f, 0.15f, 0.15f, 2.0f);
+
+    // braços
+    drawLine(x - 0.06f, y + 0.03f, x - 0.10f, y - 0.02f, 0.0f, 0.0f, 0.0f, 2.0f);
+    drawLine(x + 0.06f, y + 0.03f, x + 0.10f, y - 0.02f, 0.0f, 0.0f, 0.0f, 2.0f);
+
+    // pernas
+    drawLine(x - 0.02f, y - 0.10f, x - 0.04f, y - 0.17f, 0.0f, 0.0f, 0.0f, 2.2f);
+    drawLine(x + 0.02f, y - 0.10f, x + 0.04f, y - 0.17f, 0.0f, 0.0f, 0.0f, 2.2f);
+
+    // pés
+    drawLine(x - 0.05f, y - 0.17f, x - 0.02f, y - 0.17f, 0.0f, 0.0f, 0.0f, 2.2f);
+    drawLine(x + 0.02f, y - 0.17f, x + 0.05f, y - 0.17f, 0.0f, 0.0f, 0.0f, 2.2f);
+
 }
 
 void drawArc(float cx, float cy, float radius,
@@ -620,7 +739,7 @@ void drawAdBoards()
         0.15f, 0.25f, 0.85f
     );
 
-    // placas horizontais no topo, agora divididas para sobrar espaço no centro
+    // placas horizontais no topo
     float topGap = 0.12f;
     float topThickness = 0.35f;
     float topY1 = top + topGap;
@@ -998,7 +1117,7 @@ void drawBenches()
 //função para desenhar os números digitais
 void drawDigit(int digit, float x, float y, float size) {
     float w = size * 0.6f; //largura do dígito
-    float h = size;        //altura do dígito
+    float h = size; //altura do dígito
     float halfH = h / 2.0f;
 
     bool segments[10][7] = {
@@ -1238,6 +1357,154 @@ void drawInvasorIndicator(float x, float y) {
     glEnd();
 }
 
+void drawHexagonSeams(float cx, float cy, float innerR, float outerR, float rotationDeg = 0.0f)
+{
+    glColor3f(0.0f, 0.0f, 0.0f);
+    glLineWidth(1.5f);
+
+    glBegin(GL_LINES);
+
+    for (int i = 0; i < 6; i++)
+    {
+        float angle = 2.0f * PI * i / 6.0f + rotationDeg * PI / 180.0f;
+
+ 		// ponto no hexágono
+        float x1 = cx + innerR * cos(angle);
+        float y1 = cy + innerR * sin(angle);
+
+        // ponto na borda da bola
+        float x2 = cx + outerR * cos(angle);
+        float y2 = cy + outerR * sin(angle);
+
+        glVertex2f(x1, y1);
+        glVertex2f(x2, y2);
+    }
+
+    glEnd();
+}
+
+void drawHexagon(float cx, float cy, float radius, float r, float g, float b, float rotationDeg = 0.0f)
+{
+    glColor3f(r, g, b);
+    glBegin(GL_POLYGON);
+
+    for (int i = 0; i < 6; i++)
+    {
+        float angle = 2.0f * PI * i / 6.0f + rotationDeg * PI / 180.0f;
+        float x = cx + radius * cos(angle);
+        float y = cy + radius * sin(angle);
+        glVertex2f(x, y);
+    }
+
+    glEnd();
+}
+
+
+void drawBallModel(float x, float y)
+{
+    float r = 0.08f;
+    float hexR = r * 0.55f;
+
+    // sombra no chão
+    drawCircleAlpha(x + 0.04f, y - 0.04f, r * 0.95f, 0.15f, 0.15f, 0.15f, 0.85f);
+
+    // corpo principal da bola
+    drawCircle(x, y, r, 1.0f, 1.0f, 1.0f, true);
+
+    // sombreamento lateral
+    drawCircle(x + r * 0.18f, y - r * 0.12f, r * 0.78f, 0.70f, 0.70f, 0.70f, true);
+
+    // contorno
+    drawCircle(x, y, r, 0.0f, 0.0f, 0.0f, false);
+
+    // costuras girando
+    drawHexagonSeams(x, y, hexR, r, ballRotation);
+
+    // hexágono central girando
+    drawHexagon(x, y, hexR, 0.0f, 0.0f, 0.0f, ballRotation);
+
+
+}
+
+
+void drawPlayerModel(const Entity& p, bool goleiro = false)
+{
+    float x = p.x;
+    float y = p.y;
+
+    // sombra
+    drawCircleAlpha(x, y - 0.18f, 0.08f, 0.0f, 0.0f, 0.0f, 0.35f);
+
+ 	// animação visual
+    float anim = sin(glfwGetTime() * 8.0f + x * 3.0f + y * 2.0f) * 0.03f;
+
+    // cabeça
+    drawCircle(x, y + 0.09f, 0.04f, 1.0f, 0.85f, 0.70f, true);
+
+    // pescoço
+    drawLine(x, y + 0.05f, x, y + 0.02f, 0.85f, 0.75f, 0.65f, 2.0f);
+
+    // camisa / tronco
+    drawFilledRect(x - 0.06f, y - 0.02f, x + 0.06f, y + 0.06f, p.r, p.g, p.b);
+
+    // contorno do tronco
+    drawRectOutline(x - 0.06f, y - 0.02f, x + 0.06f, y + 0.06f, 0.0f, 0.0f, 0.0f, 1.0f);
+
+    // short
+    drawFilledRect(x - 0.055f, y - 0.08f, x + 0.055f, y - 0.02f, 0.10f, 0.10f, 0.10f);
+
+    // braços
+    drawLine(x - 0.06f, y + 0.03f, x - 0.11f, y - 0.01f + anim, 0.90f, 0.80f, 0.70f, 2.0f);
+    drawLine(x + 0.06f, y + 0.03f, x + 0.11f, y - 0.01f - anim, 0.90f, 0.80f, 0.70f, 2.0f);
+
+    // pernas
+    drawLine(x - 0.025f, y - 0.08f, x - 0.05f, y - 0.17f - anim, 0.0f, 0.0f, 0.0f, 2.0f);
+    drawLine(x + 0.025f, y - 0.08f, x + 0.05f, y - 0.17f + anim, 0.0f, 0.0f, 0.0f, 2.0f);
+
+    // pés
+    drawLine(x - 0.06f, y - 0.17f - anim, x - 0.03f, y - 0.17f - anim, 0.0f, 0.0f, 0.0f, 2.0f);
+    drawLine(x + 0.03f, y - 0.17f + anim, x + 0.06f, y - 0.17f + anim, 0.0f, 0.0f, 0.0f, 2.0f);
+
+    // detalhe branco do goleiro
+    if (goleiro)
+    {
+        drawRectOutline(x - 0.06f, y - 0.02f, x + 0.06f, y + 0.06f, 1.0f, 1.0f, 1.0f, 1.5f);
+    }
+}
+
+void drawCrowdPerson(float x, float y, float r, float g, float b, int variant)
+{
+    // sombra
+    drawCircle(x, y - 0.03f, 0.045f, 0.0f, 0.0f, 0.0f, 0.5f);
+
+    // cabeça
+    drawCircle(x, y + 0.050f, 0.035f, 1.0f, 0.85f, 0.70f, true);
+
+    // corpo
+    drawFilledRect(x - 0.035f, y - 0.045f, x + 0.035f, y + 0.025f, r, g, b);
+
+    // animação dos braços
+    float phase = glfwGetTime() * 6.0f + variant * 1.2f + x * 4.0f;
+    float armOffset = sin(phase) * 0.030f;
+
+    // ombros
+    float leftShoulderX = x - 0.035f;
+    float rightShoulderX = x + 0.035f;
+    float shoulderY = y + 0.005f;
+
+    // mãos / pontas dos braços
+    float leftHandX = x - 0.060f;
+    float rightHandX = x + 0.060f;
+
+    float leftHandY = y + 0.030f + armOffset;
+    float rightHandY = y + 0.030f - armOffset;
+
+    // braços
+    drawLine(leftShoulderX, shoulderY, leftHandX, leftHandY, 0.9f, 0.8f, 0.7f, 1.6f);
+    drawLine(rightShoulderX, shoulderY, rightHandX, rightHandY, 0.9f, 0.8f, 0.7f, 1.6f);
+}
+
+
 int main()
 {
     if (!glfwInit())
@@ -1275,9 +1542,11 @@ int main()
         return -1;
     }
 
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     while (!glfwWindowShouldClose(window))
     {
-
 
         glClearColor(0.2f, 0.6f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -1317,23 +1586,25 @@ int main()
         drawCrowd();
         glDisable(GL_POINT_SMOOTH);
 
-        drawCircle(ball.x, ball.y, 0.08f, 1.0f, 1.0f, 1.0f, true);
+        //drawCircle(ball.x, ball.y, 0.08f, 1.0f, 1.0f, 1.0f, true);
+        drawBallModel(ball.x, ball.y);
 
         for(int i = 0; i < 20; i++)
         {
-            drawCircle(players[i].x, players[i].y, 0.12f, players[i].r, players[i].g, players[i].b, true);
+            drawPlayerModel(players[i], false);
         }
         for(int i = 0; i < 2; i++)
         {
-            drawCircle(goalkeepers[i].x, goalkeepers[i].y, 0.12f, goalkeepers[i].r, goalkeepers[i].g, goalkeepers[i].b, true);
+            drawPlayerModel(goalkeepers[i], true);
         }
 
         if (invasaoAtiva)
         {
-            drawCircle(invasor.x, invasor.y, 0.12f, invasor.r, invasor.g, invasor.b, true);
+        	drawHighlightBox(invasor.x, invasor.y, 0.15);
+            drawCrowdPerson(invasor.x, invasor.y, invasor.r, invasor.g, invasor.b, 1);
             for (int i = 0; i < 2; i++)
             {
-                drawCircle(segurancas[i].x, segurancas[i].y, 0.12f, 0.2f, 0.2f, 0.2f, true);
+                drawSecurityModel(segurancas[i]);
                 if (invasorIndicatorTimer < INDICATOR_DURATION)
                 {
                     drawInvasorIndicator(invasor.x, invasor.y);
