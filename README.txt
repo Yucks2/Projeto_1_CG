@@ -8,7 +8,7 @@ FUNCIONALIDADES PRINCIPAIS
 
 - IA tática: jogadores divididos por funções (zagueiros, meios e atacantes) com comportamentos de posicionamento e perseguição distintos.
 - Física: sistema de colisões baseado em círculos com conservação de momento e resolução de sobreposição baseada em massa.
-- Torcida: geração procedural de 3.000 torcedores organizados por setores e cores (Estádio dividido).
+- Torcida: geração procedural de torcedores organizados por setores e cores (Estádio dividido).
 - Mecânica de invasão (tecla 'I'): pausa a partida principal;
 - Um torcedor aleatório entra no campo;
 - O usuário controla o invasor;
