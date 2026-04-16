@@ -155,20 +155,21 @@ void setupOrtho()
     glLoadIdentity();
 }
 
-
+//procurei ajuda no gemini pro
 void resolveCollisionWithMass(Entity& a, Entity& b, float rA, float rB)
 {
     float dx = a.x - b.x;
     float dy = a.y - b.y;
-    float dist = sqrt(dx * dx + dy * dy);
+    float dist = sqrt(dx * dx + dy * dy); //calcular a distância entre os corpos
     float minDist = rA + rB;
 
-    if(dist < minDist && dist > 0.001f)
+    if(dist < minDist && dist > 0.001f) //compara a distância atual com a distância mínima que devem ter
     {
         float overlap = minDist - dist;
         float nx = dx / dist;
         float ny = dy / dist;
-
+		
+		//devido a lei de inércia, o corpo com massa maior, irá receber repulsão menor
         float totalMass = a.mass + b.mass;
         float ratioA = b.mass / totalMass;
         float ratioB = a.mass / totalMass;
@@ -951,14 +952,10 @@ void drawPlayerTunnel()
     float radius = tunnelHeight * 0.55f;
     float centerX = 0.0f;
 
-    // =========================
     // CORPO BASE
-    // =========================
     drawFilledRect(x1, y1, x2, y2, 0.58f, 0.58f, 0.58f);
 
-    // =========================
     // TOPO CURVO COM DEGRADÊ
-    // =========================
     const int layers = 7;
     for (int i = 0; i < layers; i++)
     {
@@ -1008,9 +1005,7 @@ void drawPlayerTunnel()
         glEnd();
     }
 
-    // =========================
     // ABERTURA FRONTAL MAIS CLARA
-    // =========================
     drawFilledRect(
         x1 + 0.10f,
         y1 + 0.05f,
@@ -1028,9 +1023,7 @@ void drawPlayerTunnel()
         0.68f, 0.68f, 0.68f
     );
 
-    // =========================
     // PILARES LATERAIS
-    // =========================
     float pillarW = 0.10f;
     float pillarH = 0.15f;
 
@@ -1046,9 +1039,7 @@ void drawPlayerTunnel()
         0.50f, 0.50f, 0.50f
     );
 
-    // =========================
     // CONTORNO
-    // =========================
     drawRectOutline(
         x1 + radius * 0.55f, y1,
         x2 - radius * 0.55f, y2,
